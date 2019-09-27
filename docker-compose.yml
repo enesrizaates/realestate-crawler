@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+    db:
+        image: postgres
+        volumes:
+            - ../postgres-data:/var/lib/postgresql/data
+        environment:
+            POSTGRES_DB: sahibindendb
+            POSTGRES_USER: postgres
+        ports:
+            - 54321:5432
