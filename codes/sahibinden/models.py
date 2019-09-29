@@ -30,7 +30,8 @@ class Post(models.Model):
     fiyat = models.CharField(max_length=256, blank=True, null=True)
     ilan_aks = models.CharField(max_length=256, blank=True, null=True)
     ilan_fiyat = models.CharField(max_length=256, blank=True, null=True)
-    ilan_no = models.CharField(max_length=256, blank=True, null=True)
+    ilan_no = models.CharField(max_length=256, blank=True,
+                               null=True, unique=True)
     ilan_Tarihi = models.CharField(max_length=256, blank=True, null=True)
     Emlak_Tipi = models.CharField(max_length=256, blank=True, null=True)
     area_brut = models.CharField(max_length=256, blank=True, null=True)

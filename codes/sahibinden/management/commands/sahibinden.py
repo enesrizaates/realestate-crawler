@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-
+from django.db import IntegrityError
 import requests
 from bs4 import BeautifulSoup as bs
 import pandas as pd
@@ -24,6 +24,7 @@ def url_generator(url):
     for link in links:
         ann_url = 'https://www.sahibinden.com' + link
         ann_urls.append(ann_url)
+    ann_urls = list(dict.fromkeys(ann_urls))
     return ann_urls
 
 def soup_generator(ann_url):
@@ -62,7 +63,7 @@ def main(soup):
         except Exception:
             pass
     df_main = pd.DataFrame(vals, index=[0])
-    return df_main
+    return vals
 
 def get_descriptions(soup):
     descriptions = soup.find_all(
@@ -124,17 +125,21 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         main_url = 'https://www.sahibinden.com/satilik'
         ann_urls = url_generator(main_url)
-
+        x = 0
+        df_main = pd.DataFrame()
+        ls_main = []
         for i in ann_urls:
             soup = soup_generator(i)
-            df_main = main(soup)
+            ls_main.append(main(soup))
             df_descriptions = get_descriptions(soup)
             properties_val = get_properties(soup)
             ls_images = get_img_url(soup)
             for url in ls_images:
                 download_image(url)
-            break
-
+            x += 1
+            if x >= 3:
+                break
+        df_main = pd.DataFrame(ls_main)
         directory = './pictures'
 
         with open('urls.csv', 'w', newline='') as urls:
@@ -143,58 +148,60 @@ class Command(BaseCommand):
 
         df_main.to_csv('main.csv')
         df_descriptions.to_csv('desc.csv')
-
         from sahibinden.models import Post
         for index, row in df_main.iterrows():
-            post = Post()
-            post.cat1 = row['cat1']
-            post.cat2 = row['cat2']
-            post.cat3 = row['cat3']
-            post.cat4 = row['cat4']
-            post.cat0 = row['cat0']
-            post.country = row['loc1']
-            post.city = row['loc2']
-            post.region = row['loc3']
-            post.district = row['loc4']
-            post.street = row['loc5']
-            post.m2_brut = row['m2_brut']
-            post.m2_net = row['m2_net']
-            post.oda_sayisi = row['oda_sayisi']
-            post.bina_yasi = row['bina_yasi']
-            post.bulundugu_kat = row['bulundugu_kat']
-            post.kat_sayisi = row['kat_sayisi']
-            post.isitma = row['isitma']
-            post.banyo_sayisi = row['banyo_sayisi']
-            post.balkon = row['balkon']
-            post.esyali = row['esyali']
-            post.kullanim_durumu = row['kullanim_durumu']
-            post.site_icerisinde = row['site_icerisinde']
-            post.site_adi = row['site_adi']
-            post.krediye_uygun = row['krediye_uygun']
-            post.kimden = row['kimden']
-            post.fiyat = row['fiyat']
-            post.ilan_aks = row['ilan_aks']
-            post.ilan_fiyat = row['ilan_fiyat']
-            post.ilan_no = row['İlan No']
-            post.ilan_Tarihi = row['İlan Tarihi']
-            post.Emlak_Tipi = row['Emlak Tipi']
-            post.area_brut = row['m² (Brüt)']
-            post.area_net = row['m² (Net)']
-            post.oda_sayisi = row['Oda Sayısı']
-            post.bina_yasi = row['Bina Yaşı']
-            post.floor = row['Bulunduğu Kat']
-            post.total_floor = row['Kat Sayısı']
-            post.isitma = row['Isıtma']
-            post.banyo_sayisi = row['Banyo Sayısı']
-            post.balkon = row['Balkon']
-            post.esyali = row['Eşyalı']
-            post.kullanim_durumu = row['Kullanım Durumu']
-            post.site_icerisinde = row['Site İçerisinde']
-            post.aidat = row['Aidat (TL)']
-            post.site_adi = row['Site Adı']
-            post.krediye_uygun = row['Krediye Uygun']
-            post.kimden = row['Kimden']
-            post.takas = row['Takas']
-            post.gecici_numara_servisi = row['Geçici Numara Servisi']
-            post.site_preference = row['site_preference']
-        post.save()
+            try:
+                post = Post()
+                post.cat1 = row['cat1']
+                post.cat2 = row['cat2']
+                post.cat3 = row['cat3']
+                post.cat4 = row['cat4']
+                post.cat0 = row['cat0']
+                post.country = row['loc1']
+                post.city = row['loc2']
+                post.region = row['loc3']
+                post.district = row['loc4']
+                post.street = row['loc5']
+                post.m2_brut = row['m2_brut']
+                post.m2_net = row['m2_net']
+                post.oda_sayisi = row['oda_sayisi']
+                post.bina_yasi = row['bina_yasi']
+                post.bulundugu_kat = row['bulundugu_kat']
+                post.kat_sayisi = row['kat_sayisi']
+                post.isitma = row['isitma']
+                post.banyo_sayisi = row['banyo_sayisi']
+                post.balkon = row['balkon']
+                post.esyali = row['esyali']
+                post.kullanim_durumu = row['kullanim_durumu']
+                post.site_icerisinde = row['site_icerisinde']
+                post.site_adi = row['site_adi']
+                post.krediye_uygun = row['krediye_uygun']
+                post.kimden = row['kimden']
+                post.fiyat = row['fiyat']
+                post.ilan_aks = row['ilan_aks']
+                post.ilan_fiyat = row['ilan_fiyat']
+                post.ilan_no = row['İlan No']
+                post.ilan_Tarihi = row['İlan Tarihi']
+                post.Emlak_Tipi = row['Emlak Tipi']
+                post.area_brut = row['m² (Brüt)']
+                post.area_net = row['m² (Net)']
+                post.oda_sayisi = row['Oda Sayısı']
+                post.bina_yasi = row['Bina Yaşı']
+                post.floor = row['Bulunduğu Kat']
+                post.total_floor = row['Kat Sayısı']
+                post.isitma = row['Isıtma']
+                post.banyo_sayisi = row['Banyo Sayısı']
+                post.balkon = row['Balkon']
+                post.esyali = row['Eşyalı']
+                post.kullanim_durumu = row['Kullanım Durumu']
+                post.site_icerisinde = row['Site İçerisinde']
+                post.aidat = row['Aidat (TL)']
+                post.site_adi = row['Site Adı']
+                post.krediye_uygun = row['Krediye Uygun']
+                post.kimden = row['Kimden']
+                post.takas = row['Takas']
+                post.gecici_numara_servisi = row['Geçici Numara Servisi']
+                post.site_preference = row['site_preference']
+                post.save()
+            except IntegrityError:
+                pass
