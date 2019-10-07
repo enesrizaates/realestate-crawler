@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import datetime
 
 
 class Post(models.Model):
@@ -51,5 +52,12 @@ class Post(models.Model):
     krediye_uygun = models.CharField(max_length=256, blank=True, null=True)
     kimden = models.CharField(max_length=256, blank=True, null=True)
     takas = models.CharField(max_length=256, blank=True, null=True)
-    gecici_numara_servisi = models.CharField(max_length=256, blank=True, null=True)
+    gecici_numara_servisi = models.CharField(max_length=256,
+                                             blank=True,
+                                             null=True
+                                             )
     site_preference = models.CharField(max_length=256, blank=True, null=True)
+    record_date_time = models.DateTimeField(default=datetime.now, blank=True)
+
+def __str__(self):
+    return self.name

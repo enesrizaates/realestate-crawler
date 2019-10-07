@@ -70,20 +70,49 @@ def get_descriptions(soup):
         'div', attrs = {'id':'classifiedDescription'}
     )
     df_descriptions = pd.DataFrame(descriptions, index=[0])
-    print(df_descriptions)
     return df_descriptions
 
 
 
 def get_properties(soup):
     properties = soup.find_all(
-'li', attrs = {'class':'selected'}
+'div', attrs = {'id':'classifiedProperties'}
 )
-    properties_val = []
-    properties_val = ', '.join(
-[item.text.replace('\n','').strip() for item in properties]
-)
-    return properties_val
+
+    properties_list = []
+    for item in properties:
+        properties_val=item.text
+    for element in properties_val.split('\n'):
+        if element != '':
+            properties_list.append(element.strip())
+    properties_all = []
+    properties_selected = []
+    for i in soup.find_all('li',attrs={'class':'selected'}):
+        properties_selected.append(i.text.replace('\n','').strip())
+    for k in properties[0].find_all('li'):
+        properties_all.append(k.text.replace('\n','').strip())
+    properties_all.append('ilan_no')
+    main_json = json.loads(soup.find_all('script',
+                                         attrs={'id':'gaPageViewTrackingData'})[0].text.replace('var pageTrackData = ','').replace('\n','').replace(';',''))
+                           
+    ilan_no=[s['value'] for s in main_json['customVars'] if s['name']=='İlan No']
+    values_all=[]
+    properties_all = list(set(properties_all))
+    properties_selected = list(set(properties_selected))
+    properties_all.sort()
+    properties_selected.sort()
+    lookup = [x for x,y in enumerate(properties_all) if y in properties_selected]
+    list1 = [properties_all[i] for i in lookup]
+    l1 = [False for i in properties_all]
+    for i in lookup:
+        l1[i] = True
+    zipped = zip(properties_all, l1)
+    df = pd.DataFrame(zipped)
+    df = df.transpose()
+    df.columns = df.loc[0]
+    df = df.drop(0)
+    df['ilan_no'] = ilan_no
+    return df
 
 
 def get_img_url(soup):
@@ -125,15 +154,18 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         main_url = 'https://www.sahibinden.com/satilik'
         ann_urls = url_generator(main_url)
-        x = 0
         df_main = pd.DataFrame()
         ls_main = []
+        x = 0
         for i in ann_urls:
             soup = soup_generator(i)
             ls_main.append(main(soup))
             df_descriptions = get_descriptions(soup)
             properties_val = get_properties(soup)
+            properties_val.to_csv('properties.csv')
             ls_images = get_img_url(soup)
+            import pdb
+            pdb.set_trace()
             for url in ls_images:
                 download_image(url)
             x += 1
@@ -150,58 +182,57 @@ class Command(BaseCommand):
         df_descriptions.to_csv('desc.csv')
         from sahibinden.models import Post
         for index, row in df_main.iterrows():
-            try:
+            post = Post.objects.filter(ilan_no=row['İlan No']).first()
+            if not post:
                 post = Post()
-                post.cat1 = row['cat1']
-                post.cat2 = row['cat2']
-                post.cat3 = row['cat3']
-                post.cat4 = row['cat4']
-                post.cat0 = row['cat0']
-                post.country = row['loc1']
-                post.city = row['loc2']
-                post.region = row['loc3']
-                post.district = row['loc4']
-                post.street = row['loc5']
-                post.m2_brut = row['m2_brut']
-                post.m2_net = row['m2_net']
-                post.oda_sayisi = row['oda_sayisi']
-                post.bina_yasi = row['bina_yasi']
-                post.bulundugu_kat = row['bulundugu_kat']
-                post.kat_sayisi = row['kat_sayisi']
-                post.isitma = row['isitma']
-                post.banyo_sayisi = row['banyo_sayisi']
-                post.balkon = row['balkon']
-                post.esyali = row['esyali']
-                post.kullanim_durumu = row['kullanim_durumu']
-                post.site_icerisinde = row['site_icerisinde']
-                post.site_adi = row['site_adi']
-                post.krediye_uygun = row['krediye_uygun']
-                post.kimden = row['kimden']
-                post.fiyat = row['fiyat']
-                post.ilan_aks = row['ilan_aks']
-                post.ilan_fiyat = row['ilan_fiyat']
-                post.ilan_no = row['İlan No']
-                post.ilan_Tarihi = row['İlan Tarihi']
-                post.Emlak_Tipi = row['Emlak Tipi']
-                post.area_brut = row['m² (Brüt)']
-                post.area_net = row['m² (Net)']
-                post.oda_sayisi = row['Oda Sayısı']
-                post.bina_yasi = row['Bina Yaşı']
-                post.floor = row['Bulunduğu Kat']
-                post.total_floor = row['Kat Sayısı']
-                post.isitma = row['Isıtma']
-                post.banyo_sayisi = row['Banyo Sayısı']
-                post.balkon = row['Balkon']
-                post.esyali = row['Eşyalı']
-                post.kullanim_durumu = row['Kullanım Durumu']
-                post.site_icerisinde = row['Site İçerisinde']
-                post.aidat = row['Aidat (TL)']
-                post.site_adi = row['Site Adı']
-                post.krediye_uygun = row['Krediye Uygun']
-                post.kimden = row['Kimden']
-                post.takas = row['Takas']
-                post.gecici_numara_servisi = row['Geçici Numara Servisi']
-                post.site_preference = row['site_preference']
-                post.save()
-            except IntegrityError:
-                pass
+            post.cat1 = row['cat1']
+            post.cat2 = row['cat2']
+            post.cat3 = row['cat3']
+            post.cat4 = row['cat4']
+            post.cat0 = row['cat0']
+            post.country = row['loc1']
+            post.city = row['loc2']
+            post.region = row['loc3']
+            post.district = row['loc4']
+            post.street = row['loc5']
+            post.m2_brut = row['m2_brut']
+            post.m2_net = row['m2_net']
+            post.oda_sayisi = row['oda_sayisi']
+            post.bina_yasi = row['bina_yasi']
+            post.bulundugu_kat = row['bulundugu_kat']
+            post.kat_sayisi = row['kat_sayisi']
+            post.isitma = row['isitma']
+            post.banyo_sayisi = row['banyo_sayisi']
+            post.balkon = row['balkon']
+            post.esyali = row['esyali']
+            post.kullanim_durumu = row['kullanim_durumu']
+            post.site_icerisinde = row['site_icerisinde']
+            post.site_adi = row['site_adi']
+            post.krediye_uygun = row['krediye_uygun']
+            post.kimden = row['kimden']
+            post.fiyat = row['fiyat']
+            post.ilan_aks = row['ilan_aks']
+            post.ilan_fiyat = row['ilan_fiyat']
+            post.ilan_no = row['İlan No']
+            post.ilan_Tarihi = row['İlan Tarihi']
+            post.Emlak_Tipi = row['Emlak Tipi']
+            post.area_brut = row['m² (Brüt)']
+            post.area_net = row['m² (Net)']
+            post.oda_sayisi = row['Oda Sayısı']
+            post.bina_yasi = row['Bina Yaşı']
+            post.floor = row['Bulunduğu Kat']
+            post.total_floor = row['Kat Sayısı']
+            post.isitma = row['Isıtma']
+            post.banyo_sayisi = row['Banyo Sayısı']
+            post.balkon = row['Balkon']
+            post.esyali = row['Eşyalı']
+            post.kullanim_durumu = row['Kullanım Durumu']
+            post.site_icerisinde = row['Site İçerisinde']
+            post.aidat = row['Aidat (TL)']
+            post.site_adi = row['Site Adı']
+            post.krediye_uygun = row['Krediye Uygun']
+            post.kimden = row['Kimden']
+            post.takas = row['Takas']
+            post.gecici_numara_servisi = row['Geçici Numara Servisi']
+            post.site_preference = row['site_preference']
+            post.save()
